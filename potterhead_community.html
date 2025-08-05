@@ -1,0 +1,452 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        
+            <script>function neighbourhoodHighlight(params) {
+  // console.log("in nieghbourhoodhighlight");
+  allNodes = nodes.get({ returnType: "Object" });
+  // originalNodes = JSON.parse(JSON.stringify(allNodes));
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    highlightActive = true;
+    var i, j;
+    var selectedNode = params.nodes[0];
+    var degrees = 2;
+
+    // mark all nodes as hard to read.
+    for (let nodeId in allNodes) {
+      // nodeColors[nodeId] = allNodes[nodeId].color;
+      allNodes[nodeId].color = "rgba(200,200,200,0.5)";
+      if (allNodes[nodeId].hiddenLabel === undefined) {
+        allNodes[nodeId].hiddenLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+    var connectedNodes = network.getConnectedNodes(selectedNode);
+    var allConnectedNodes = [];
+
+    // get the second degree nodes
+    for (i = 1; i < degrees; i++) {
+      for (j = 0; j < connectedNodes.length; j++) {
+        allConnectedNodes = allConnectedNodes.concat(
+          network.getConnectedNodes(connectedNodes[j])
+        );
+      }
+    }
+
+    // all second degree nodes get a different color and their label back
+    for (i = 0; i < allConnectedNodes.length; i++) {
+      // allNodes[allConnectedNodes[i]].color = "pink";
+      allNodes[allConnectedNodes[i]].color = "rgba(150,150,150,0.75)";
+      if (allNodes[allConnectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[allConnectedNodes[i]].label =
+          allNodes[allConnectedNodes[i]].hiddenLabel;
+        allNodes[allConnectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // all first degree nodes get their own color and their label back
+    for (i = 0; i < connectedNodes.length; i++) {
+      // allNodes[connectedNodes[i]].color = undefined;
+      allNodes[connectedNodes[i]].color = nodeColors[connectedNodes[i]];
+      if (allNodes[connectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[connectedNodes[i]].label =
+          allNodes[connectedNodes[i]].hiddenLabel;
+        allNodes[connectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // the main node gets its own color and its label back.
+    // allNodes[selectedNode].color = undefined;
+    allNodes[selectedNode].color = nodeColors[selectedNode];
+    if (allNodes[selectedNode].hiddenLabel !== undefined) {
+      allNodes[selectedNode].label = allNodes[selectedNode].hiddenLabel;
+      allNodes[selectedNode].hiddenLabel = undefined;
+    }
+  } else if (highlightActive === true) {
+    // console.log("highlightActive was true");
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      // allNodes[nodeId].color = "purple";
+      allNodes[nodeId].color = nodeColors[nodeId];
+      // delete allNodes[nodeId].color;
+      if (allNodes[nodeId].hiddenLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].hiddenLabel;
+        allNodes[nodeId].hiddenLabel = undefined;
+      }
+    }
+    highlightActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    // console.log("Nothing was selected");
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        // allNodes[nodeId].color = {};
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function filterHighlight(params) {
+  allNodes = nodes.get({ returnType: "Object" });
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    filterActive = true;
+    let selectedNodes = params.nodes;
+
+    // hiding all nodes and saving the label
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = true;
+      if (allNodes[nodeId].savedLabel === undefined) {
+        allNodes[nodeId].savedLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+
+    for (let i=0; i < selectedNodes.length; i++) {
+      allNodes[selectedNodes[i]].hidden = false;
+      if (allNodes[selectedNodes[i]].savedLabel !== undefined) {
+        allNodes[selectedNodes[i]].label = allNodes[selectedNodes[i]].savedLabel;
+        allNodes[selectedNodes[i]].savedLabel = undefined;
+      }
+    }
+
+  } else if (filterActive === true) {
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = false;
+      if (allNodes[nodeId].savedLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].savedLabel;
+        allNodes[nodeId].savedLabel = undefined;
+      }
+    }
+    filterActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function selectNode(nodes) {
+  network.selectNodes(nodes);
+  neighbourhoodHighlight({ nodes: nodes });
+  return nodes;
+}
+
+function selectNodes(nodes) {
+  network.selectNodes(nodes);
+  filterHighlight({nodes: nodes});
+  return nodes;
+}
+
+function highlightFilter(filter) {
+  let selectedNodes = []
+  let selectedProp = filter['property']
+  if (filter['item'] === 'node') {
+    let allNodes = nodes.get({ returnType: "Object" });
+    for (let nodeId in allNodes) {
+      if (allNodes[nodeId][selectedProp] && filter['value'].includes((allNodes[nodeId][selectedProp]).toString())) {
+        selectedNodes.push(nodeId)
+      }
+    }
+  }
+  else if (filter['item'] === 'edge'){
+    let allEdges = edges.get({returnType: 'object'});
+    // check if the selected property exists for selected edge and select the nodes connected to the edge
+    for (let edge in allEdges) {
+      if (allEdges[edge][selectedProp] && filter['value'].includes((allEdges[edge][selectedProp]).toString())) {
+        selectedNodes.push(allEdges[edge]['from'])
+        selectedNodes.push(allEdges[edge]['to'])
+      }
+    }
+  }
+  selectNodes(selectedNodes)
+}</script>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" integrity="sha512-WgxfT5LWjfszlPHXRmBWHkV2eceiWTOBvrKCNbdgDYTHrT2AeLCGbF4sZlZw3UMN3WtL0tGUoIAKsu8mllg/XA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js" integrity="sha512-LnvoEWDFrqGHlHmDD2101OrLcbsfkrzoSpvtSQtxK3RMnRV0eOkhhBN2dXHKRrUU8p2DGRTk35n4O8nWSVe1mQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+            
+            
+            
+            
+            
+
+        
+<center>
+<h1></h1>
+</center>
+
+<!-- <link rel="stylesheet" href="../node_modules/vis/dist/vis.min.css" type="text/css" />
+<script type="text/javascript" src="../node_modules/vis/dist/vis.js"> </script>-->
+        <link
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6"
+          crossorigin="anonymous"
+        />
+        <script
+          src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js"
+          integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf"
+          crossorigin="anonymous"
+        ></script>
+
+
+        <center>
+          <h1></h1>
+        </center>
+        <style type="text/css">
+
+             #mynetwork {
+                 width: 1000px;
+                 height: 700px;
+                 background-color: black;
+                 border: 1px solid lightgray;
+                 position: relative;
+                 float: left;
+             }
+
+             
+             #loadingBar {
+                 position:absolute;
+                 top:0px;
+                 left:0px;
+                 width: 1000px;
+                 height: 700px;
+                 background-color:rgba(200,200,200,0.8);
+                 -webkit-transition: all 0.5s ease;
+                 -moz-transition: all 0.5s ease;
+                 -ms-transition: all 0.5s ease;
+                 -o-transition: all 0.5s ease;
+                 transition: all 0.5s ease;
+                 opacity:1;
+             }
+
+             #bar {
+                 position:absolute;
+                 top:0px;
+                 left:0px;
+                 width:20px;
+                 height:20px;
+                 margin:auto auto auto auto;
+                 border-radius:11px;
+                 border:2px solid rgba(30,30,30,0.05);
+                 background: rgb(0, 173, 246); /* Old browsers */
+                 box-shadow: 2px 0px 4px rgba(0,0,0,0.4);
+             }
+
+             #border {
+                 position:absolute;
+                 top:10px;
+                 left:10px;
+                 width:500px;
+                 height:23px;
+                 margin:auto auto auto auto;
+                 box-shadow: 0px 0px 4px rgba(0,0,0,0.2);
+                 border-radius:10px;
+             }
+
+             #text {
+                 position:absolute;
+                 top:8px;
+                 left:530px;
+                 width:30px;
+                 height:50px;
+                 margin:auto auto auto auto;
+                 font-size:22px;
+                 color: #000000;
+             }
+
+             div.outerBorder {
+                 position:relative;
+                 top:400px;
+                 width:600px;
+                 height:44px;
+                 margin:auto auto auto auto;
+                 border:8px solid rgba(0,0,0,0.1);
+                 background: rgb(252,252,252); /* Old browsers */
+                 background: -moz-linear-gradient(top,  rgba(252,252,252,1) 0%, rgba(237,237,237,1) 100%); /* FF3.6+ */
+                 background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,rgba(252,252,252,1)), color-stop(100%,rgba(237,237,237,1))); /* Chrome,Safari4+ */
+                 background: -webkit-linear-gradient(top,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* Chrome10+,Safari5.1+ */
+                 background: -o-linear-gradient(top,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* Opera 11.10+ */
+                 background: -ms-linear-gradient(top,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* IE10+ */
+                 background: linear-gradient(to bottom,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* W3C */
+                 filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#fcfcfc', endColorstr='#ededed',GradientType=0 ); /* IE6-9 */
+                 border-radius:72px;
+                 box-shadow: 0px 0px 10px rgba(0,0,0,0.2);
+             }
+             
+
+             
+
+             
+        </style>
+    </head>
+
+
+    <body>
+        <div class="card" style="width: 100%">
+            
+            
+            <div id="mynetwork" class="card-body"></div>
+        </div>
+
+        
+            <div id="loadingBar">
+              <div class="outerBorder">
+                <div id="text">0%</div>
+                <div id="border">
+                  <div id="bar"></div>
+                </div>
+              </div>
+            </div>
+        
+        
+
+        <script type="text/javascript">
+
+              // initialize global variables.
+              var edges;
+              var nodes;
+              var allNodes;
+              var allEdges;
+              var nodeColors;
+              var originalNodes;
+              var network;
+              var container;
+              var options, data;
+              var filter = {
+                  item : '',
+                  property : '',
+                  value : []
+              };
+
+              
+
+              
+
+              // This method is responsible for drawing the graph, returns the drawn network
+              function drawGraph() {
+                  var container = document.getElementById('mynetwork');
+
+                  
+
+                  // parsing and collecting nodes and edges from the python
+                  nodes = new vis.DataSet([{"font": {"color": "white"}, "group": 0, "id": "Harry Potter", "label": "Harry Potter", "shape": "dot", "size": 77}, {"font": {"color": "white"}, "group": 1, "id": "Ronald Weasley", "label": "Ronald Weasley", "shape": "dot", "size": 45}, {"font": {"color": "white"}, "group": 2, "id": "Rubeus Hagrid", "label": "Rubeus Hagrid", "shape": "dot", "size": 39}, {"font": {"color": "white"}, "group": 0, "id": "Dudley", "label": "Dudley", "shape": "dot", "size": 16}, {"font": {"color": "white"}, "group": 1, "id": "Hermione Granger", "label": "Hermione Granger", "shape": "dot", "size": 30}, {"font": {"color": "white"}, "group": 5, "id": "Severus Snape", "label": "Severus Snape", "shape": "dot", "size": 26}, {"font": {"color": "white"}, "group": 2, "id": "Albus Dumbledore", "label": "Albus Dumbledore", "shape": "dot", "size": 32}, {"font": {"color": "white"}, "group": 2, "id": "Quirinus Quirrell", "label": "Quirinus Quirrell", "shape": "dot", "size": 22}, {"font": {"color": "white"}, "group": 4, "id": "Draco Malfoy", "label": "Draco Malfoy", "shape": "dot", "size": 30}, {"font": {"color": "white"}, "group": 1, "id": "Neville Longbottom", "label": "Neville Longbottom", "shape": "dot", "size": 29}, {"font": {"color": "white"}, "group": 5, "id": "Minerva McGonagall", "label": "Minerva McGonagall", "shape": "dot", "size": 27}, {"font": {"color": "white"}, "group": 5, "id": "Oliver Wood", "label": "Oliver Wood", "shape": "dot", "size": 11}, {"font": {"color": "white"}, "group": 2, "id": "Lily Potter", "label": "Lily Potter", "shape": "dot", "size": 23}, {"font": {"color": "white"}, "group": 2, "id": "Hogwarts Giant Squid", "label": "Hogwarts Giant Squid", "shape": "dot", "size": 21}, {"font": {"color": "white"}, "group": 5, "id": "Godric Gryffindor", "label": "Godric Gryffindor", "shape": "dot", "size": 21}, {"font": {"color": "white"}, "group": 1, "id": "Argus Filch", "label": "Argus Filch", "shape": "dot", "size": 15}, {"font": {"color": "white"}, "group": 5, "id": "Salazar Slytherin", "label": "Salazar Slytherin", "shape": "dot", "size": 20}, {"font": {"color": "white"}, "group": 2, "id": "Gringotts Head Goblin", "label": "Gringotts Head Goblin", "shape": "dot", "size": 8}, {"font": {"color": "white"}, "group": 1, "id": "Percy Weasley", "label": "Percy Weasley", "shape": "dot", "size": 13}, {"font": {"color": "white"}, "group": 2, "id": "Garrick Ollivander", "label": "Garrick Ollivander", "shape": "dot", "size": 4}, {"font": {"color": "white"}, "group": 0, "id": "Vernon Dursley", "label": "Vernon Dursley", "shape": "dot", "size": 11}, {"font": {"color": "white"}, "group": 2, "id": "Seamus Finnigan", "label": "Seamus Finnigan", "shape": "dot", "size": 11}, {"font": {"color": "white"}, "group": 5, "id": "Fred Weasley", "label": "Fred Weasley", "shape": "dot", "size": 14}, {"font": {"color": "white"}, "group": 2, "id": "Firenze", "label": "Firenze", "shape": "dot", "size": 7}, {"font": {"color": "white"}, "group": 1, "id": "Father Christmas", "label": "Father Christmas", "shape": "dot", "size": 13}, {"font": {"color": "white"}, "group": 0, "id": "Hedwig", "label": "Hedwig", "shape": "dot", "size": 7}, {"font": {"color": "white"}, "group": 5, "id": "Marcus Flint", "label": "Marcus Flint", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 0, "id": "Arabella Figg", "label": "Arabella Figg", "shape": "dot", "size": 4}, {"font": {"color": "white"}, "group": 2, "id": "Nicolas Flamel", "label": "Nicolas Flamel", "shape": "dot", "size": 12}, {"font": {"color": "white"}, "group": 5, "id": "George Weasley", "label": "George Weasley", "shape": "dot", "size": 17}, {"font": {"color": "white"}, "group": 1, "id": "Fluffy", "label": "Fluffy", "shape": "dot", "size": 14}, {"font": {"color": "white"}, "group": 5, "id": "Poppy Pomfrey", "label": "Poppy Pomfrey", "shape": "dot", "size": 9}, {"font": {"color": "white"}, "group": 1, "id": "Filius Flitwick", "label": "Filius Flitwick", "shape": "dot", "size": 14}, {"font": {"color": "white"}, "group": 1, "id": "Mrs Norris", "label": "Mrs Norris", "shape": "dot", "size": 9}, {"font": {"color": "white"}, "group": 2, "id": "Griphook", "label": "Griphook", "shape": "dot", "size": 3}, {"font": {"color": "white"}, "group": 1, "id": "Peeves", "label": "Peeves", "shape": "dot", "size": 10}, {"font": {"color": "white"}, "group": 4, "id": "Goyle", "label": "Goyle", "shape": "dot", "size": 7}, {"font": {"color": "white"}, "group": 5, "id": "Lee Jordan", "label": "Lee Jordan", "shape": "dot", "size": 11}, {"font": {"color": "white"}, "group": 1, "id": "Fang", "label": "Fang", "shape": "dot", "size": 7}, {"font": {"color": "white"}, "group": 0, "id": "Smeltings Academy", "label": "Smeltings Academy", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 5, "id": "Helga Hufflepuff", "label": "Helga Hufflepuff", "shape": "dot", "size": 11}, {"font": {"color": "white"}, "group": 1, "id": "Pomona Sprout", "label": "Pomona Sprout", "shape": "dot", "size": 4}, {"font": {"color": "white"}, "group": 2, "id": "Doris Crockford", "label": "Doris Crockford", "shape": "dot", "size": 4}, {"font": {"color": "white"}, "group": 0, "id": "Piers Polkiss", "label": "Piers Polkiss", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 2, "id": "Ronan", "label": "Ronan", "shape": "dot", "size": 5}, {"font": {"color": "white"}, "group": 2, "id": "Dean Thomas", "label": "Dean Thomas", "shape": "dot", "size": 9}, {"font": {"color": "white"}, "group": 2, "id": "Dedalus Diggle", "label": "Dedalus Diggle", "shape": "dot", "size": 3}, {"font": {"color": "white"}, "group": 1, "id": "Ginevra Weasley", "label": "Ginevra Weasley", "shape": "dot", "size": 4}, {"font": {"color": "white"}, "group": 5, "id": "Ravenclaw", "label": "Ravenclaw", "shape": "dot", "size": 8}, {"font": {"color": "white"}, "group": 0, "id": "Petunia Dursley", "label": "Petunia Dursley", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 1, "id": "Rolanda Hooch", "label": "Rolanda Hooch", "shape": "dot", "size": 4}, {"font": {"color": "white"}, "group": 1, "id": "Cornelius Agrippa", "label": "Cornelius Agrippa", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 5, "id": "Frank Longbottom", "label": "Frank Longbottom", "shape": "dot", "size": 9}, {"font": {"color": "white"}, "group": 0, "id": "Amelia Bones", "label": "Amelia Bones", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 2, "id": "Bane", "label": "Bane", "shape": "dot", "size": 6}, {"font": {"color": "white"}, "group": 0, "id": "Yvonne", "label": "Yvonne", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 2, "id": "James Potter", "label": "James Potter", "shape": "dot", "size": 4}, {"font": {"color": "white"}, "group": 5, "id": "Angelina Johnson", "label": "Angelina Johnson", "shape": "dot", "size": 9}, {"font": {"color": "white"}, "group": 0, "id": "Vindictus Viridian", "label": "Vindictus Viridian", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 1, "id": "Cuthbert Binns", "label": "Cuthbert Binns", "shape": "dot", "size": 4}, {"font": {"color": "white"}, "group": 5, "id": "Bertie Higgs", "label": "Bertie Higgs", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 1, "id": "Parvati Patil", "label": "Parvati Patil", "shape": "dot", "size": 7}, {"font": {"color": "white"}, "group": 5, "id": "Adrian Pucey", "label": "Adrian Pucey", "shape": "dot", "size": 4}, {"font": {"color": "white"}, "group": 4, "id": "Dishevelled Wizard", "label": "Dishevelled Wizard", "shape": "dot", "size": 4}, {"font": {"color": "white"}, "group": 4, "id": "Sally-Anne Perks", "label": "Sally-Anne Perks", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 0, "id": "Quentin Trimble", "label": "Quentin Trimble", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 0, "id": "Justin Finch-Fletchley", "label": "Justin Finch-Fletchley", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 5, "id": "Katie Bell", "label": "Katie Bell", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 5, "id": "Susan Bones", "label": "Susan Bones", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 1, "id": "Lavender Brown", "label": "Lavender Brown", "shape": "dot", "size": 4}, {"font": {"color": "white"}, "group": 0, "id": "Snowy", "label": "Snowy", "shape": "dot", "size": 4}, {"font": {"color": "white"}, "group": 0, "id": "Dudley Dursley", "label": "Dudley Dursley", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 0, "id": "Harold Dingle", "label": "Harold Dingle", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 2, "id": "Unicorn", "label": "Unicorn", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 1, "id": "Nicholas de Mimsy-Porpington", "label": "Nicholas de Mimsy-Porpington", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 0, "id": "Miranda Goshawk", "label": "Miranda Goshawk", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 4, "id": "Crabbe", "label": "Crabbe", "shape": "dot", "size": 3}, {"font": {"color": "white"}, "group": 2, "id": "Perenelle Flamel", "label": "Perenelle Flamel", "shape": "dot", "size": 3}, {"font": {"color": "white"}, "group": 1, "id": "Elfric the Eager", "label": "Elfric the Eager", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 1, "id": "Bloody Baron", "label": "Bloody Baron", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 3, "id": "Merlin", "label": "Merlin", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 2, "id": "Tom", "label": "Tom", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 0, "id": "Gordon", "label": "Gordon", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 0, "id": "Dennis", "label": "Dennis", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 2, "id": "Gellert Grindelwald", "label": "Gellert Grindelwald", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 2, "id": "Security Troll", "label": "Security Troll", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 3, "id": "Hengist of Woodcroft", "label": "Hengist of Woodcroft", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 2, "id": "Cornelius Fudge", "label": "Cornelius Fudge", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 2, "id": "Thomas Riddle", "label": "Thomas Riddle", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 4, "id": "Padma Patil", "label": "Padma Patil", "shape": "dot", "size": 4}, {"font": {"color": "white"}, "group": 4, "id": "Morag MacDougal", "label": "Morag MacDougal", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 4, "id": "Lily Moon", "label": "Lily Moon", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 1, "id": "Trevor", "label": "Trevor", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 5, "id": "Alicia Spinnet", "label": "Alicia Spinnet", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 5, "id": "Abbott", "label": "Abbott", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 2, "id": "Sorting Hat", "label": "Sorting Hat", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 5, "id": "Lisa Turpin", "label": "Lisa Turpin", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 0, "id": "Tufty", "label": "Tufty", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 0, "id": "Ted", "label": "Ted", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 5, "id": "Pansy Parkinson", "label": "Pansy Parkinson", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 5, "id": "Gregory the Smarmy", "label": "Gregory the Smarmy", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 0, "id": "Mr Tibbles", "label": "Mr Tibbles", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 5, "id": "Terry Boot", "label": "Terry Boot", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 5, "id": "Hannah Abbott", "label": "Hannah Abbott", "shape": "dot", "size": 4}, {"font": {"color": "white"}, "group": 0, "id": "Jim McGuffin", "label": "Jim McGuffin", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 0, "id": "Arsenius Jigger", "label": "Arsenius Jigger", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 0, "id": "Phyllida Spore", "label": "Phyllida Spore", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 0, "id": "Emeric Switch", "label": "Emeric Switch", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 0, "id": "Adalbert Waffling", "label": "Adalbert Waffling", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 0, "id": "Mr Paws", "label": "Mr Paws", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 4, "id": "Nott", "label": "Nott", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 0, "id": "Malcolm", "label": "Malcolm", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 3, "id": "Alberic Grunnion", "label": "Alberic Grunnion", "shape": "dot", "size": 2}]);
+                  edges = new vis.DataSet([{"from": "Harry Potter", "to": "Ronald Weasley", "width": 1}, {"from": "Harry Potter", "to": "Rubeus Hagrid", "width": 1}, {"from": "Harry Potter", "to": "Dudley", "width": 1}, {"from": "Harry Potter", "to": "Hermione Granger", "width": 1}, {"from": "Harry Potter", "to": "Severus Snape", "width": 1}, {"from": "Harry Potter", "to": "Albus Dumbledore", "width": 1}, {"from": "Harry Potter", "to": "Quirinus Quirrell", "width": 1}, {"from": "Harry Potter", "to": "Draco Malfoy", "width": 1}, {"from": "Harry Potter", "to": "Neville Longbottom", "width": 1}, {"from": "Harry Potter", "to": "Minerva McGonagall", "width": 1}, {"from": "Harry Potter", "to": "Oliver Wood", "width": 1}, {"from": "Harry Potter", "to": "Lily Potter", "width": 1}, {"from": "Harry Potter", "to": "Hogwarts Giant Squid", "width": 1}, {"from": "Harry Potter", "to": "Godric Gryffindor", "width": 1}, {"from": "Harry Potter", "to": "Argus Filch", "width": 1}, {"from": "Harry Potter", "to": "Salazar Slytherin", "width": 1}, {"from": "Harry Potter", "to": "Gringotts Head Goblin", "width": 1}, {"from": "Harry Potter", "to": "Percy Weasley", "width": 1}, {"from": "Harry Potter", "to": "Garrick Ollivander", "width": 1}, {"from": "Harry Potter", "to": "Vernon Dursley", "width": 1}, {"from": "Harry Potter", "to": "Seamus Finnigan", "width": 1}, {"from": "Harry Potter", "to": "Fred Weasley", "width": 1}, {"from": "Harry Potter", "to": "Firenze", "width": 1}, {"from": "Harry Potter", "to": "Father Christmas", "width": 1}, {"from": "Harry Potter", "to": "Hedwig", "width": 1}, {"from": "Harry Potter", "to": "Marcus Flint", "width": 1}, {"from": "Harry Potter", "to": "Arabella Figg", "width": 1}, {"from": "Harry Potter", "to": "Nicolas Flamel", "width": 1}, {"from": "Harry Potter", "to": "George Weasley", "width": 1}, {"from": "Harry Potter", "to": "Fluffy", "width": 1}, {"from": "Harry Potter", "to": "Poppy Pomfrey", "width": 1}, {"from": "Harry Potter", "to": "Filius Flitwick", "width": 1}, {"from": "Harry Potter", "to": "Mrs Norris", "width": 1}, {"from": "Harry Potter", "to": "Griphook", "width": 1}, {"from": "Harry Potter", "to": "Peeves", "width": 1}, {"from": "Harry Potter", "to": "Goyle", "width": 1}, {"from": "Harry Potter", "to": "Lee Jordan", "width": 1}, {"from": "Harry Potter", "to": "Fang", "width": 1}, {"from": "Harry Potter", "to": "Smeltings Academy", "width": 1}, {"from": "Harry Potter", "to": "Helga Hufflepuff", "width": 1}, {"from": "Harry Potter", "to": "Pomona Sprout", "width": 1}, {"from": "Harry Potter", "to": "Doris Crockford", "width": 1}, {"from": "Harry Potter", "to": "Piers Polkiss", "width": 1}, {"from": "Harry Potter", "to": "Ronan", "width": 1}, {"from": "Harry Potter", "to": "Dean Thomas", "width": 1}, {"from": "Harry Potter", "to": "Dedalus Diggle", "width": 1}, {"from": "Harry Potter", "to": "Ginevra Weasley", "width": 1}, {"from": "Harry Potter", "to": "Ravenclaw", "width": 1}, {"from": "Harry Potter", "to": "Petunia Dursley", "width": 1}, {"from": "Harry Potter", "to": "Rolanda Hooch", "width": 1}, {"from": "Harry Potter", "to": "Cornelius Agrippa", "width": 1}, {"from": "Harry Potter", "to": "Frank Longbottom", "width": 1}, {"from": "Harry Potter", "to": "Amelia Bones", "width": 1}, {"from": "Harry Potter", "to": "Bane", "width": 1}, {"from": "Harry Potter", "to": "Yvonne", "width": 1}, {"from": "Harry Potter", "to": "James Potter", "width": 1}, {"from": "Harry Potter", "to": "Angelina Johnson", "width": 1}, {"from": "Harry Potter", "to": "Vindictus Viridian", "width": 1}, {"from": "Harry Potter", "to": "Cuthbert Binns", "width": 1}, {"from": "Harry Potter", "to": "Bertie Higgs", "width": 1}, {"from": "Harry Potter", "to": "Parvati Patil", "width": 1}, {"from": "Harry Potter", "to": "Adrian Pucey", "width": 1}, {"from": "Harry Potter", "to": "Dishevelled Wizard", "width": 1}, {"from": "Harry Potter", "to": "Sally-Anne Perks", "width": 1}, {"from": "Harry Potter", "to": "Quentin Trimble", "width": 1}, {"from": "Harry Potter", "to": "Justin Finch-Fletchley", "width": 1}, {"from": "Harry Potter", "to": "Katie Bell", "width": 1}, {"from": "Harry Potter", "to": "Susan Bones", "width": 1}, {"from": "Harry Potter", "to": "Lavender Brown", "width": 1}, {"from": "Harry Potter", "to": "Snowy", "width": 1}, {"from": "Harry Potter", "to": "Dudley Dursley", "width": 1}, {"from": "Harry Potter", "to": "Harold Dingle", "width": 1}, {"from": "Harry Potter", "to": "Unicorn", "width": 1}, {"from": "Harry Potter", "to": "Nicholas de Mimsy-Porpington", "width": 1}, {"from": "Harry Potter", "to": "Miranda Goshawk", "width": 1}, {"from": "Harry Potter", "to": "Crabbe", "width": 1}, {"from": "Harry Potter", "to": "Perenelle Flamel", "width": 1}, {"from": "Ronald Weasley", "to": "Hermione Granger", "width": 1}, {"from": "Ronald Weasley", "to": "Rubeus Hagrid", "width": 1}, {"from": "Ronald Weasley", "to": "Draco Malfoy", "width": 1}, {"from": "Ronald Weasley", "to": "Neville Longbottom", "width": 1}, {"from": "Ronald Weasley", "to": "Severus Snape", "width": 1}, {"from": "Ronald Weasley", "to": "Albus Dumbledore", "width": 1}, {"from": "Ronald Weasley", "to": "Godric Gryffindor", "width": 1}, {"from": "Ronald Weasley", "to": "Dean Thomas", "width": 1}, {"from": "Ronald Weasley", "to": "Argus Filch", "width": 1}, {"from": "Ronald Weasley", "to": "Nicolas Flamel", "width": 1}, {"from": "Ronald Weasley", "to": "George Weasley", "width": 1}, {"from": "Ronald Weasley", "to": "Quirinus Quirrell", "width": 1}, {"from": "Ronald Weasley", "to": "Mrs Norris", "width": 1}, {"from": "Ronald Weasley", "to": "Minerva McGonagall", "width": 1}, {"from": "Ronald Weasley", "to": "Gringotts Head Goblin", "width": 1}, {"from": "Ronald Weasley", "to": "Goyle", "width": 1}, {"from": "Ronald Weasley", "to": "Lily Potter", "width": 1}, {"from": "Ronald Weasley", "to": "Lee Jordan", "width": 1}, {"from": "Ronald Weasley", "to": "Filius Flitwick", "width": 1}, {"from": "Ronald Weasley", "to": "Oliver Wood", "width": 1}, {"from": "Ronald Weasley", "to": "Salazar Slytherin", "width": 1}, {"from": "Ronald Weasley", "to": "Hogwarts Giant Squid", "width": 1}, {"from": "Ronald Weasley", "to": "Percy Weasley", "width": 1}, {"from": "Ronald Weasley", "to": "Peeves", "width": 1}, {"from": "Ronald Weasley", "to": "Poppy Pomfrey", "width": 1}, {"from": "Ronald Weasley", "to": "Hedwig", "width": 1}, {"from": "Ronald Weasley", "to": "Fluffy", "width": 1}, {"from": "Ronald Weasley", "to": "Dudley", "width": 1}, {"from": "Ronald Weasley", "to": "Seamus Finnigan", "width": 1}, {"from": "Ronald Weasley", "to": "Fang", "width": 1}, {"from": "Ronald Weasley", "to": "Fred Weasley", "width": 1}, {"from": "Ronald Weasley", "to": "Cornelius Agrippa", "width": 1}, {"from": "Ronald Weasley", "to": "Parvati Patil", "width": 1}, {"from": "Ronald Weasley", "to": "Elfric the Eager", "width": 1}, {"from": "Ronald Weasley", "to": "Frank Longbottom", "width": 1}, {"from": "Ronald Weasley", "to": "Angelina Johnson", "width": 1}, {"from": "Ronald Weasley", "to": "Ginevra Weasley", "width": 1}, {"from": "Ronald Weasley", "to": "Father Christmas", "width": 1}, {"from": "Ronald Weasley", "to": "Bloody Baron", "width": 1}, {"from": "Ronald Weasley", "to": "Nicholas de Mimsy-Porpington", "width": 1}, {"from": "Ronald Weasley", "to": "Firenze", "width": 1}, {"from": "Ronald Weasley", "to": "Merlin", "width": 1}, {"from": "Ronald Weasley", "to": "Dishevelled Wizard", "width": 1}, {"from": "Ronald Weasley", "to": "Ravenclaw", "width": 1}, {"from": "Rubeus Hagrid", "to": "Hermione Granger", "width": 1}, {"from": "Rubeus Hagrid", "to": "Albus Dumbledore", "width": 1}, {"from": "Rubeus Hagrid", "to": "Severus Snape", "width": 1}, {"from": "Rubeus Hagrid", "to": "Minerva McGonagall", "width": 1}, {"from": "Rubeus Hagrid", "to": "Ronan", "width": 1}, {"from": "Rubeus Hagrid", "to": "Fang", "width": 1}, {"from": "Rubeus Hagrid", "to": "Hogwarts Giant Squid", "width": 1}, {"from": "Rubeus Hagrid", "to": "Gringotts Head Goblin", "width": 1}, {"from": "Rubeus Hagrid", "to": "Argus Filch", "width": 1}, {"from": "Rubeus Hagrid", "to": "Fluffy", "width": 1}, {"from": "Rubeus Hagrid", "to": "Draco Malfoy", "width": 1}, {"from": "Rubeus Hagrid", "to": "Garrick Ollivander", "width": 1}, {"from": "Rubeus Hagrid", "to": "Dudley", "width": 1}, {"from": "Rubeus Hagrid", "to": "Neville Longbottom", "width": 1}, {"from": "Rubeus Hagrid", "to": "Father Christmas", "width": 1}, {"from": "Rubeus Hagrid", "to": "Quirinus Quirrell", "width": 1}, {"from": "Rubeus Hagrid", "to": "Lily Potter", "width": 1}, {"from": "Rubeus Hagrid", "to": "Vernon Dursley", "width": 1}, {"from": "Rubeus Hagrid", "to": "Nicolas Flamel", "width": 1}, {"from": "Rubeus Hagrid", "to": "Firenze", "width": 1}, {"from": "Rubeus Hagrid", "to": "Tom", "width": 1}, {"from": "Rubeus Hagrid", "to": "Bane", "width": 1}, {"from": "Rubeus Hagrid", "to": "Peeves", "width": 1}, {"from": "Rubeus Hagrid", "to": "Salazar Slytherin", "width": 1}, {"from": "Rubeus Hagrid", "to": "Doris Crockford", "width": 1}, {"from": "Rubeus Hagrid", "to": "Fred Weasley", "width": 1}, {"from": "Rubeus Hagrid", "to": "Dean Thomas", "width": 1}, {"from": "Rubeus Hagrid", "to": "George Weasley", "width": 1}, {"from": "Rubeus Hagrid", "to": "James Potter", "width": 1}, {"from": "Rubeus Hagrid", "to": "Filius Flitwick", "width": 1}, {"from": "Rubeus Hagrid", "to": "Hedwig", "width": 1}, {"from": "Rubeus Hagrid", "to": "Seamus Finnigan", "width": 1}, {"from": "Rubeus Hagrid", "to": "Angelina Johnson", "width": 1}, {"from": "Rubeus Hagrid", "to": "Godric Gryffindor", "width": 1}, {"from": "Rubeus Hagrid", "to": "Griphook", "width": 1}, {"from": "Rubeus Hagrid", "to": "Dishevelled Wizard", "width": 1}, {"from": "Rubeus Hagrid", "to": "Lee Jordan", "width": 1}, {"from": "Dudley", "to": "Vernon Dursley", "width": 1}, {"from": "Dudley", "to": "Piers Polkiss", "width": 1}, {"from": "Dudley", "to": "Smeltings Academy", "width": 1}, {"from": "Dudley", "to": "Arabella Figg", "width": 1}, {"from": "Dudley", "to": "Hogwarts Giant Squid", "width": 1}, {"from": "Dudley", "to": "Draco Malfoy", "width": 1}, {"from": "Dudley", "to": "Gordon", "width": 1}, {"from": "Dudley", "to": "Vindictus Viridian", "width": 1}, {"from": "Dudley", "to": "Justin Finch-Fletchley", "width": 1}, {"from": "Dudley", "to": "Dennis", "width": 1}, {"from": "Dudley", "to": "Hedwig", "width": 1}, {"from": "Dudley", "to": "Lily Potter", "width": 1}, {"from": "Dudley", "to": "Salazar Slytherin", "width": 1}, {"from": "Hermione Granger", "to": "Neville Longbottom", "width": 1}, {"from": "Hermione Granger", "to": "Severus Snape", "width": 1}, {"from": "Hermione Granger", "to": "Minerva McGonagall", "width": 1}, {"from": "Hermione Granger", "to": "Albus Dumbledore", "width": 1}, {"from": "Hermione Granger", "to": "Godric Gryffindor", "width": 1}, {"from": "Hermione Granger", "to": "Ronan", "width": 1}, {"from": "Hermione Granger", "to": "Draco Malfoy", "width": 1}, {"from": "Hermione Granger", "to": "Nicolas Flamel", "width": 1}, {"from": "Hermione Granger", "to": "Lily Potter", "width": 1}, {"from": "Hermione Granger", "to": "Filius Flitwick", "width": 1}, {"from": "Hermione Granger", "to": "Fluffy", "width": 1}, {"from": "Hermione Granger", "to": "Father Christmas", "width": 1}, {"from": "Hermione Granger", "to": "Argus Filch", "width": 1}, {"from": "Hermione Granger", "to": "Quirinus Quirrell", "width": 1}, {"from": "Hermione Granger", "to": "Lavender Brown", "width": 1}, {"from": "Hermione Granger", "to": "Percy Weasley", "width": 1}, {"from": "Hermione Granger", "to": "Parvati Patil", "width": 1}, {"from": "Hermione Granger", "to": "Dean Thomas", "width": 1}, {"from": "Hermione Granger", "to": "Rolanda Hooch", "width": 1}, {"from": "Hermione Granger", "to": "Elfric the Eager", "width": 1}, {"from": "Hermione Granger", "to": "Perenelle Flamel", "width": 1}, {"from": "Hermione Granger", "to": "Poppy Pomfrey", "width": 1}, {"from": "Hermione Granger", "to": "Hogwarts Giant Squid", "width": 1}, {"from": "Hermione Granger", "to": "Marcus Flint", "width": 1}, {"from": "Hermione Granger", "to": "Seamus Finnigan", "width": 1}, {"from": "Hermione Granger", "to": "Salazar Slytherin", "width": 1}, {"from": "Hermione Granger", "to": "Mrs Norris", "width": 1}, {"from": "Severus Snape", "to": "Quirinus Quirrell", "width": 1}, {"from": "Severus Snape", "to": "Albus Dumbledore", "width": 1}, {"from": "Severus Snape", "to": "Draco Malfoy", "width": 1}, {"from": "Severus Snape", "to": "Argus Filch", "width": 1}, {"from": "Severus Snape", "to": "Godric Gryffindor", "width": 1}, {"from": "Severus Snape", "to": "Minerva McGonagall", "width": 1}, {"from": "Severus Snape", "to": "Lily Potter", "width": 1}, {"from": "Severus Snape", "to": "Neville Longbottom", "width": 1}, {"from": "Severus Snape", "to": "Helga Hufflepuff", "width": 1}, {"from": "Severus Snape", "to": "Nicolas Flamel", "width": 1}, {"from": "Severus Snape", "to": "Salazar Slytherin", "width": 1}, {"from": "Severus Snape", "to": "Hogwarts Giant Squid", "width": 1}, {"from": "Severus Snape", "to": "Seamus Finnigan", "width": 1}, {"from": "Severus Snape", "to": "Oliver Wood", "width": 1}, {"from": "Severus Snape", "to": "Mrs Norris", "width": 1}, {"from": "Severus Snape", "to": "Fluffy", "width": 1}, {"from": "Severus Snape", "to": "Fred Weasley", "width": 1}, {"from": "Severus Snape", "to": "Filius Flitwick", "width": 1}, {"from": "Severus Snape", "to": "Peeves", "width": 1}, {"from": "Severus Snape", "to": "George Weasley", "width": 1}, {"from": "Severus Snape", "to": "Goyle", "width": 1}, {"from": "Severus Snape", "to": "Cuthbert Binns", "width": 1}, {"from": "Albus Dumbledore", "to": "Minerva McGonagall", "width": 1}, {"from": "Albus Dumbledore", "to": "Quirinus Quirrell", "width": 1}, {"from": "Albus Dumbledore", "to": "Nicolas Flamel", "width": 1}, {"from": "Albus Dumbledore", "to": "Godric Gryffindor", "width": 1}, {"from": "Albus Dumbledore", "to": "Salazar Slytherin", "width": 1}, {"from": "Albus Dumbledore", "to": "Poppy Pomfrey", "width": 1}, {"from": "Albus Dumbledore", "to": "Percy Weasley", "width": 1}, {"from": "Albus Dumbledore", "to": "Gellert Grindelwald", "width": 1}, {"from": "Albus Dumbledore", "to": "Ravenclaw", "width": 1}, {"from": "Albus Dumbledore", "to": "Draco Malfoy", "width": 1}, {"from": "Albus Dumbledore", "to": "Vernon Dursley", "width": 1}, {"from": "Albus Dumbledore", "to": "Fred Weasley", "width": 1}, {"from": "Albus Dumbledore", "to": "Fluffy", "width": 1}, {"from": "Albus Dumbledore", "to": "Security Troll", "width": 1}, {"from": "Albus Dumbledore", "to": "Lily Potter", "width": 1}, {"from": "Albus Dumbledore", "to": "Gringotts Head Goblin", "width": 1}, {"from": "Albus Dumbledore", "to": "Filius Flitwick", "width": 1}, {"from": "Albus Dumbledore", "to": "Hedwig", "width": 1}, {"from": "Albus Dumbledore", "to": "Hengist of Woodcroft", "width": 1}, {"from": "Albus Dumbledore", "to": "James Potter", "width": 1}, {"from": "Albus Dumbledore", "to": "Firenze", "width": 1}, {"from": "Albus Dumbledore", "to": "Father Christmas", "width": 1}, {"from": "Albus Dumbledore", "to": "Bane", "width": 1}, {"from": "Albus Dumbledore", "to": "Dedalus Diggle", "width": 1}, {"from": "Albus Dumbledore", "to": "Cornelius Fudge", "width": 1}, {"from": "Albus Dumbledore", "to": "Neville Longbottom", "width": 1}, {"from": "Albus Dumbledore", "to": "Hogwarts Giant Squid", "width": 1}, {"from": "Quirinus Quirrell", "to": "Fluffy", "width": 1}, {"from": "Quirinus Quirrell", "to": "Minerva McGonagall", "width": 1}, {"from": "Quirinus Quirrell", "to": "Hogwarts Giant Squid", "width": 1}, {"from": "Quirinus Quirrell", "to": "Percy Weasley", "width": 1}, {"from": "Quirinus Quirrell", "to": "Argus Filch", "width": 1}, {"from": "Quirinus Quirrell", "to": "Gringotts Head Goblin", "width": 1}, {"from": "Quirinus Quirrell", "to": "Seamus Finnigan", "width": 1}, {"from": "Quirinus Quirrell", "to": "Lily Potter", "width": 1}, {"from": "Quirinus Quirrell", "to": "Salazar Slytherin", "width": 1}, {"from": "Quirinus Quirrell", "to": "Unicorn", "width": 1}, {"from": "Quirinus Quirrell", "to": "Garrick Ollivander", "width": 1}, {"from": "Quirinus Quirrell", "to": "George Weasley", "width": 1}, {"from": "Quirinus Quirrell", "to": "Draco Malfoy", "width": 1}, {"from": "Quirinus Quirrell", "to": "Thomas Riddle", "width": 1}, {"from": "Quirinus Quirrell", "to": "Doris Crockford", "width": 1}, {"from": "Quirinus Quirrell", "to": "Nicolas Flamel", "width": 1}, {"from": "Draco Malfoy", "to": "Neville Longbottom", "width": 1}, {"from": "Draco Malfoy", "to": "Fang", "width": 1}, {"from": "Draco Malfoy", "to": "Godric Gryffindor", "width": 1}, {"from": "Draco Malfoy", "to": "Lily Potter", "width": 1}, {"from": "Draco Malfoy", "to": "Argus Filch", "width": 1}, {"from": "Draco Malfoy", "to": "Salazar Slytherin", "width": 1}, {"from": "Draco Malfoy", "to": "Frank Longbottom", "width": 1}, {"from": "Draco Malfoy", "to": "Minerva McGonagall", "width": 1}, {"from": "Draco Malfoy", "to": "Parvati Patil", "width": 1}, {"from": "Draco Malfoy", "to": "Poppy Pomfrey", "width": 1}, {"from": "Draco Malfoy", "to": "Filius Flitwick", "width": 1}, {"from": "Draco Malfoy", "to": "George Weasley", "width": 1}, {"from": "Draco Malfoy", "to": "Padma Patil", "width": 1}, {"from": "Draco Malfoy", "to": "Crabbe", "width": 1}, {"from": "Draco Malfoy", "to": "Hogwarts Giant Squid", "width": 1}, {"from": "Draco Malfoy", "to": "Father Christmas", "width": 1}, {"from": "Draco Malfoy", "to": "Goyle", "width": 1}, {"from": "Draco Malfoy", "to": "Morag MacDougal", "width": 1}, {"from": "Draco Malfoy", "to": "Dishevelled Wizard", "width": 1}, {"from": "Draco Malfoy", "to": "Nicolas Flamel", "width": 1}, {"from": "Draco Malfoy", "to": "Lily Moon", "width": 1}, {"from": "Draco Malfoy", "to": "Seamus Finnigan", "width": 1}, {"from": "Neville Longbottom", "to": "Argus Filch", "width": 1}, {"from": "Neville Longbottom", "to": "Godric Gryffindor", "width": 1}, {"from": "Neville Longbottom", "to": "Minerva McGonagall", "width": 1}, {"from": "Neville Longbottom", "to": "Seamus Finnigan", "width": 1}, {"from": "Neville Longbottom", "to": "Rolanda Hooch", "width": 1}, {"from": "Neville Longbottom", "to": "Fang", "width": 1}, {"from": "Neville Longbottom", "to": "Salazar Slytherin", "width": 1}, {"from": "Neville Longbottom", "to": "Trevor", "width": 1}, {"from": "Neville Longbottom", "to": "Poppy Pomfrey", "width": 1}, {"from": "Neville Longbottom", "to": "Goyle", "width": 1}, {"from": "Neville Longbottom", "to": "Filius Flitwick", "width": 1}, {"from": "Neville Longbottom", "to": "Fred Weasley", "width": 1}, {"from": "Neville Longbottom", "to": "Percy Weasley", "width": 1}, {"from": "Neville Longbottom", "to": "Hogwarts Giant Squid", "width": 1}, {"from": "Neville Longbottom", "to": "Morag MacDougal", "width": 1}, {"from": "Neville Longbottom", "to": "Dean Thomas", "width": 1}, {"from": "Neville Longbottom", "to": "Mrs Norris", "width": 1}, {"from": "Neville Longbottom", "to": "Frank Longbottom", "width": 1}, {"from": "Neville Longbottom", "to": "Ravenclaw", "width": 1}, {"from": "Neville Longbottom", "to": "Father Christmas", "width": 1}, {"from": "Neville Longbottom", "to": "Peeves", "width": 1}, {"from": "Neville Longbottom", "to": "Lee Jordan", "width": 1}, {"from": "Minerva McGonagall", "to": "Oliver Wood", "width": 1}, {"from": "Minerva McGonagall", "to": "Filius Flitwick", "width": 1}, {"from": "Minerva McGonagall", "to": "Lily Potter", "width": 1}, {"from": "Minerva McGonagall", "to": "Lee Jordan", "width": 1}, {"from": "Minerva McGonagall", "to": "Salazar Slytherin", "width": 1}, {"from": "Minerva McGonagall", "to": "Godric Gryffindor", "width": 1}, {"from": "Minerva McGonagall", "to": "Argus Filch", "width": 1}, {"from": "Minerva McGonagall", "to": "Peeves", "width": 1}, {"from": "Minerva McGonagall", "to": "Padma Patil", "width": 1}, {"from": "Minerva McGonagall", "to": "Fluffy", "width": 1}, {"from": "Minerva McGonagall", "to": "Alicia Spinnet", "width": 1}, {"from": "Minerva McGonagall", "to": "Gringotts Head Goblin", "width": 1}, {"from": "Minerva McGonagall", "to": "Poppy Pomfrey", "width": 1}, {"from": "Minerva McGonagall", "to": "Father Christmas", "width": 1}, {"from": "Minerva McGonagall", "to": "Abbott", "width": 1}, {"from": "Minerva McGonagall", "to": "Sorting Hat", "width": 1}, {"from": "Minerva McGonagall", "to": "Helga Hufflepuff", "width": 1}, {"from": "Minerva McGonagall", "to": "Hogwarts Giant Squid", "width": 1}, {"from": "Oliver Wood", "to": "Lily Potter", "width": 1}, {"from": "Oliver Wood", "to": "Godric Gryffindor", "width": 1}, {"from": "Oliver Wood", "to": "Fred Weasley", "width": 1}, {"from": "Oliver Wood", "to": "Helga Hufflepuff", "width": 1}, {"from": "Oliver Wood", "to": "George Weasley", "width": 1}, {"from": "Oliver Wood", "to": "Angelina Johnson", "width": 1}, {"from": "Oliver Wood", "to": "Lee Jordan", "width": 1}, {"from": "Lily Potter", "to": "James Potter", "width": 1}, {"from": "Lily Potter", "to": "Firenze", "width": 1}, {"from": "Lily Potter", "to": "Vernon Dursley", "width": 1}, {"from": "Lily Potter", "to": "Doris Crockford", "width": 1}, {"from": "Lily Potter", "to": "Dedalus Diggle", "width": 1}, {"from": "Lily Potter", "to": "Dean Thomas", "width": 1}, {"from": "Lily Potter", "to": "Marcus Flint", "width": 1}, {"from": "Lily Potter", "to": "Frank Longbottom", "width": 1}, {"from": "Lily Potter", "to": "Goyle", "width": 1}, {"from": "Lily Potter", "to": "Godric Gryffindor", "width": 1}, {"from": "Lily Potter", "to": "Bane", "width": 1}, {"from": "Lily Potter", "to": "Garrick Ollivander", "width": 1}, {"from": "Hogwarts Giant Squid", "to": "Gringotts Head Goblin", "width": 1}, {"from": "Hogwarts Giant Squid", "to": "Salazar Slytherin", "width": 1}, {"from": "Hogwarts Giant Squid", "to": "Godric Gryffindor", "width": 1}, {"from": "Hogwarts Giant Squid", "to": "Sorting Hat", "width": 1}, {"from": "Hogwarts Giant Squid", "to": "Cornelius Fudge", "width": 1}, {"from": "Hogwarts Giant Squid", "to": "Fluffy", "width": 1}, {"from": "Hogwarts Giant Squid", "to": "Argus Filch", "width": 1}, {"from": "Hogwarts Giant Squid", "to": "Nicolas Flamel", "width": 1}, {"from": "Hogwarts Giant Squid", "to": "Percy Weasley", "width": 1}, {"from": "Hogwarts Giant Squid", "to": "Hedwig", "width": 1}, {"from": "Godric Gryffindor", "to": "Salazar Slytherin", "width": 1}, {"from": "Godric Gryffindor", "to": "Helga Hufflepuff", "width": 1}, {"from": "Godric Gryffindor", "to": "George Weasley", "width": 1}, {"from": "Godric Gryffindor", "to": "Frank Longbottom", "width": 1}, {"from": "Godric Gryffindor", "to": "Marcus Flint", "width": 1}, {"from": "Godric Gryffindor", "to": "Lisa Turpin", "width": 1}, {"from": "Godric Gryffindor", "to": "Lee Jordan", "width": 1}, {"from": "Godric Gryffindor", "to": "Percy Weasley", "width": 1}, {"from": "Godric Gryffindor", "to": "Dean Thomas", "width": 1}, {"from": "Argus Filch", "to": "Peeves", "width": 1}, {"from": "Argus Filch", "to": "Mrs Norris", "width": 1}, {"from": "Argus Filch", "to": "Nicolas Flamel", "width": 1}, {"from": "Argus Filch", "to": "Fluffy", "width": 1}, {"from": "Argus Filch", "to": "Fang", "width": 1}, {"from": "Vernon Dursley", "to": "Petunia Dursley", "width": 1}, {"from": "Vernon Dursley", "to": "Arabella Figg", "width": 1}, {"from": "Vernon Dursley", "to": "Harold Dingle", "width": 1}, {"from": "Vernon Dursley", "to": "Tufty", "width": 1}, {"from": "Vernon Dursley", "to": "Dudley Dursley", "width": 1}, {"from": "Vernon Dursley", "to": "Ted", "width": 1}, {"from": "Salazar Slytherin", "to": "Ravenclaw", "width": 1}, {"from": "Salazar Slytherin", "to": "Helga Hufflepuff", "width": 1}, {"from": "Salazar Slytherin", "to": "Pansy Parkinson", "width": 1}, {"from": "Salazar Slytherin", "to": "Poppy Pomfrey", "width": 1}, {"from": "Salazar Slytherin", "to": "George Weasley", "width": 1}, {"from": "Salazar Slytherin", "to": "Parvati Patil", "width": 1}, {"from": "Salazar Slytherin", "to": "Angelina Johnson", "width": 1}, {"from": "Gringotts Head Goblin", "to": "Griphook", "width": 1}, {"from": "Percy Weasley", "to": "George Weasley", "width": 1}, {"from": "Percy Weasley", "to": "Peeves", "width": 1}, {"from": "Percy Weasley", "to": "Father Christmas", "width": 1}, {"from": "Percy Weasley", "to": "Fred Weasley", "width": 1}, {"from": "Percy Weasley", "to": "Ginevra Weasley", "width": 1}, {"from": "Seamus Finnigan", "to": "Dean Thomas", "width": 1}, {"from": "Seamus Finnigan", "to": "Marcus Flint", "width": 1}, {"from": "Seamus Finnigan", "to": "Filius Flitwick", "width": 1}, {"from": "Fred Weasley", "to": "George Weasley", "width": 1}, {"from": "Fred Weasley", "to": "Adrian Pucey", "width": 1}, {"from": "Fred Weasley", "to": "Helga Hufflepuff", "width": 1}, {"from": "Fred Weasley", "to": "Ginevra Weasley", "width": 1}, {"from": "Fred Weasley", "to": "Lee Jordan", "width": 1}, {"from": "Fred Weasley", "to": "Angelina Johnson", "width": 1}, {"from": "Firenze", "to": "Bane", "width": 1}, {"from": "Firenze", "to": "Ronan", "width": 1}, {"from": "Father Christmas", "to": "Filius Flitwick", "width": 1}, {"from": "Father Christmas", "to": "Mrs Norris", "width": 1}, {"from": "Father Christmas", "to": "Fluffy", "width": 1}, {"from": "Father Christmas", "to": "George Weasley", "width": 1}, {"from": "Ronan", "to": "Bane", "width": 1}, {"from": "Fang", "to": "Mrs Norris", "width": 1}, {"from": "George Weasley", "to": "Helga Hufflepuff", "width": 1}, {"from": "George Weasley", "to": "Angelina Johnson", "width": 1}, {"from": "George Weasley", "to": "Rolanda Hooch", "width": 1}, {"from": "George Weasley", "to": "Gregory the Smarmy", "width": 1}, {"from": "George Weasley", "to": "Poppy Pomfrey", "width": 1}, {"from": "Hedwig", "to": "Fluffy", "width": 1}, {"from": "Marcus Flint", "to": "Katie Bell", "width": 1}, {"from": "Marcus Flint", "to": "Lee Jordan", "width": 1}, {"from": "Marcus Flint", "to": "Adrian Pucey", "width": 1}, {"from": "Marcus Flint", "to": "Angelina Johnson", "width": 1}, {"from": "Marcus Flint", "to": "Bertie Higgs", "width": 1}, {"from": "Arabella Figg", "to": "Mr Tibbles", "width": 1}, {"from": "Nicolas Flamel", "to": "Gellert Grindelwald", "width": 1}, {"from": "Nicolas Flamel", "to": "Perenelle Flamel", "width": 1}, {"from": "Peeves", "to": "Bloody Baron", "width": 1}, {"from": "Peeves", "to": "Mrs Norris", "width": 1}, {"from": "Dean Thomas", "to": "Thomas Riddle", "width": 1}, {"from": "Fluffy", "to": "Pomona Sprout", "width": 1}, {"from": "Fluffy", "to": "Filius Flitwick", "width": 1}, {"from": "Filius Flitwick", "to": "Pomona Sprout", "width": 1}, {"from": "Filius Flitwick", "to": "Cuthbert Binns", "width": 1}, {"from": "Ravenclaw", "to": "Helga Hufflepuff", "width": 1}, {"from": "Ravenclaw", "to": "Lisa Turpin", "width": 1}, {"from": "Ravenclaw", "to": "Terry Boot", "width": 1}, {"from": "Helga Hufflepuff", "to": "Hannah Abbott", "width": 1}, {"from": "Helga Hufflepuff", "to": "Frank Longbottom", "width": 1}, {"from": "Frank Longbottom", "to": "Pansy Parkinson", "width": 1}, {"from": "Frank Longbottom", "to": "Parvati Patil", "width": 1}, {"from": "Goyle", "to": "Crabbe", "width": 1}, {"from": "Lee Jordan", "to": "Adrian Pucey", "width": 1}, {"from": "Lee Jordan", "to": "Gregory the Smarmy", "width": 1}, {"from": "Pomona Sprout", "to": "Cuthbert Binns", "width": 1}, {"from": "Parvati Patil", "to": "Lavender Brown", "width": 1}, {"from": "Angelina Johnson", "to": "Alicia Spinnet", "width": 1}, {"from": "Jim McGuffin", "to": "Ted", "width": 1}, {"from": "Arsenius Jigger", "to": "Quentin Trimble", "width": 1}, {"from": "Arsenius Jigger", "to": "Phyllida Spore", "width": 1}, {"from": "Emeric Switch", "to": "Phyllida Spore", "width": 1}, {"from": "Emeric Switch", "to": "Adalbert Waffling", "width": 1}, {"from": "Adalbert Waffling", "to": "Miranda Goshawk", "width": 1}, {"from": "Lavender Brown", "to": "Snowy", "width": 1}, {"from": "Snowy", "to": "Mr Tibbles", "width": 1}, {"from": "Snowy", "to": "Mr Paws", "width": 1}, {"from": "Padma Patil", "to": "Sally-Anne Perks", "width": 1}, {"from": "Padma Patil", "to": "Nott", "width": 1}, {"from": "Nott", "to": "Lily Moon", "width": 1}, {"from": "Mr Paws", "to": "Tufty", "width": 1}, {"from": "Gordon", "to": "Malcolm", "width": 1}, {"from": "Malcolm", "to": "Dennis", "width": 1}, {"from": "Alberic Grunnion", "to": "Hengist of Woodcroft", "width": 1}, {"from": "Alberic Grunnion", "to": "Merlin", "width": 1}, {"from": "Hannah Abbott", "to": "Susan Bones", "width": 1}, {"from": "Hannah Abbott", "to": "Abbott", "width": 1}, {"from": "Hannah Abbott", "to": "Terry Boot", "width": 1}]);
+
+                  nodeColors = {};
+                  allNodes = nodes.get({ returnType: "Object" });
+                  for (nodeId in allNodes) {
+                    nodeColors[nodeId] = allNodes[nodeId].color;
+                  }
+                  allEdges = edges.get({ returnType: "Object" });
+                  // adding nodes and edges to the graph
+                  data = {nodes: nodes, edges: edges};
+
+                  var options = {
+    "configure": {
+        "enabled": false
+    },
+    "edges": {
+        "color": {
+            "inherit": true
+        },
+        "smooth": {
+            "enabled": true,
+            "type": "dynamic"
+        }
+    },
+    "interaction": {
+        "dragNodes": true,
+        "hideEdgesOnDrag": false,
+        "hideNodesOnDrag": false
+    },
+    "physics": {
+        "enabled": true,
+        "repulsion": {
+            "centralGravity": 0.2,
+            "damping": 0.09,
+            "nodeDistance": 100,
+            "springConstant": 0.05,
+            "springLength": 200
+        },
+        "solver": "repulsion",
+        "stabilization": {
+            "enabled": true,
+            "fit": true,
+            "iterations": 1000,
+            "onlyDynamicEdges": false,
+            "updateInterval": 50
+        }
+    }
+};
+
+                  
+
+
+                  
+
+                  network = new vis.Network(container, data, options);
+
+                  
+
+                  
+
+                  
+
+
+                  
+                      network.on("stabilizationProgress", function(params) {
+                          document.getElementById('loadingBar').removeAttribute("style");
+                          var maxWidth = 496;
+                          var minWidth = 20;
+                          var widthFactor = params.iterations/params.total;
+                          var width = Math.max(minWidth,maxWidth * widthFactor);
+                          document.getElementById('bar').style.width = width + 'px';
+                          document.getElementById('text').innerHTML = Math.round(widthFactor*100) + '%';
+                      });
+                      network.once("stabilizationIterationsDone", function() {
+                          document.getElementById('text').innerHTML = '100%';
+                          document.getElementById('bar').style.width = '496px';
+                          document.getElementById('loadingBar').style.opacity = 0;
+                          // really clean the dom element
+                          setTimeout(function () {document.getElementById('loadingBar').style.display = 'none';}, 500);
+                      });
+                  
+
+                  return network;
+
+              }
+              drawGraph();
+        </script>
+    </body>
+</html>
